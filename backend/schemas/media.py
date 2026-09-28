@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AnalyzeRequest(BaseModel):
@@ -45,6 +45,18 @@ class DownloadRequest(BaseModel):
     format_id: Optional[str] = Field(
         default="best", max_length=64, description="yt-dlp format selector"
     )
+    quality: str = Field(
+        default="best",
+        description="Quality preset: best, high (1080p), medium (720p), low (480p)",
+    )
+
+    @field_validator("quality")
+    @classmethod
+    def _validate_quality(cls, value: str) -> str:
+        value = (value or "best").strip().lower()
+        if value not in {"best", "high", "medium", "low"}:
+            raise ValueError("quality must be best, high, medium, or low")
+        return value
 
 
 class AudioRequest(BaseModel):

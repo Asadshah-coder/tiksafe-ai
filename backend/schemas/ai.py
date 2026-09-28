@@ -74,3 +74,19 @@ class TranslateResponse(BaseModel):
     ok: bool = True
     translated: str
     target: str
+
+
+class KeywordRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=20000, description="Caption or transcript")
+    max_keywords: int = Field(default=10, ge=1, le=30)
+
+
+class KeywordResponse(BaseModel):
+    ok: bool = True
+    keywords: list[str] = []
+    hashtags: list[str] = []
+    offline: bool = True
+    note: str = (
+        "Offline keyword helper (no AI used): top frequent words with "
+        "common stop-words removed. Review before posting."
+    )

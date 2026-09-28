@@ -9,6 +9,8 @@ from ...schemas.ai import (
     CaptionResponse,
     HashtagRequest,
     HashtagResponse,
+    KeywordRequest,
+    KeywordResponse,
     SummarizeRequest,
     SummarizeResponse,
     TranscriptSegment,
@@ -17,9 +19,21 @@ from ...schemas.ai import (
     TranslateRequest,
     TranslateResponse,
 )
-from ...services import ai_service, downloader, transcription
+from ...services import ai_service, downloader, keywords as keyword_service, transcription
 
 router = APIRouter()
+
+
+@router.post(
+    "/keywords",
+    response_model=KeywordResponse,
+    summary="Offline keyword & hashtag helper (no AI key needed)",
+)
+async def keyword_helper(payload: KeywordRequest) -> KeywordResponse:
+    words, tags = await run_in_threadpool(
+        keyword_service.extract_keywords, payload.text, payload.max_keywords
+    )
+    return KeywordResponse(ok=True, keywords=words, hashtags=tags)
 
 
 @router.post("/caption", response_model=CaptionResponse, summary="Generate captions")

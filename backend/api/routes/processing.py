@@ -30,16 +30,66 @@ log = get_logger("routes.processing")
 router = APIRouter()
 
 OPERATIONS = {
-    "trim", "crop", "resize", "compress", "convert", "audio", "thumbnail", "subtitles",
+    "trim", "crop", "resize", "compress", "convert", "audio", "thumbnail",
+    "subtitles", "gif", "mute",
 }
 EXT_BY_OPERATION = {
     "trim": ".mp4", "crop": ".mp4", "resize": ".mp4", "compress": ".mp4",
-    "convert": ".mp4", "audio": ".mp3", "thumbnail": ".jpg", "subtitles": ".srt",
+    "convert": ".mp4", "audio": ".mp3", "thumbnail": ".jpg",
+    "subtitles": ".srt", "gif": ".gif", "mute": ".mp4",
 }
 MIME_BY_EXT = {
     ".mp4": "video/mp4", ".mp3": "audio/mpeg",
-    ".jpg": "image/jpeg", ".srt": "text/plain",
+    ".jpg": "image/jpeg", ".srt": "text/plain", ".gif": "image/gif",
 }
+
+
+@router.post("/video-info", summary="Inspect an uploaded video's metadata")
+async def video_info(file: UploadFile = File(...)) -> dict:
+    """Return ffprobe metadata (duration, resolution, codecs...) for an upload."""
+    settings = get_settings()
+    if not ffmpeg_service.ffmpeg_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Media inspection is unavailable: FFmpeg is not installed on this server.",
+        )
+    try:
+        safe_name = validate_upload_filename(file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    work_dir = settings.temp_dir / "probe" / uuid.uuid4().hex
+    work_dir.mkdir(parents=True, exist_ok=True)
+    src = work_dir / safe_name
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    size = 0
+    try:
+        with src.open("wb") as fh:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File is larger than the {settings.max_upload_mb} MB upload limit.",
+                    )
+                fh.write(chunk)
+    except HTTPException:
+        remove_path(work_dir)
+        raise
+    if size == 0:
+        remove_path(work_dir)
+        raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+
+    try:
+        info = await run_in_threadpool(ffmpeg_service.probe, src)
+    except (FFmpegError, FFmpegNotAvailable) as exc:
+        remove_path(work_dir)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    remove_path(work_dir)
+    return {"ok": True, "info": info}
 
 
 @router.post("/process-video", summary="Process an uploaded video")
@@ -144,6 +194,10 @@ async def process_video(
                 transcription.transcribe_audio, audio_tmp
             )
             ffmpeg_service.write_srt(segments, dst)
+        elif op == "gif":
+            await run_in_threadpool(ffmpeg_service.video_to_gif, src, dst)
+        elif op == "mute":
+            await run_in_threadpool(ffmpeg_service.mute_video, src, dst)
     except HTTPException:
         remove_path(work_dir)
         raise

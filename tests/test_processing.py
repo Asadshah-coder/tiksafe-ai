@@ -170,3 +170,105 @@ def test_api_audio_on_silent_video_gives_clear_error(client, monkeypatch, tmp_pa
         get_settings.cache_clear()
     assert resp.status_code == 422
     assert "no audio track" in resp.json()["error"]
+
+
+@needs_ffmpeg
+def test_video_to_gif(tmp_path, monkeypatch):
+    import subprocess
+
+    _stub_temp_dir(monkeypatch, tmp_path)
+    src = tmp_path / "src.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+         "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+         "-c:v", "libx264", "-an", str(src)],
+        check=True, timeout=60,
+    )
+    dst = ffmpeg_service.video_to_gif(src, tmp_path / "out.gif", width=160, fps=5)
+    assert dst.exists() and dst.stat().st_size > 0
+    assert not (tmp_path / "out_palette.png").exists()
+
+
+@needs_ffmpeg
+def test_mute_video_removes_audio(tmp_path, monkeypatch):
+    import subprocess
+
+    _stub_temp_dir(monkeypatch, tmp_path)
+    src = tmp_path / "src.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+         "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+         "-c:v", "libx264", "-c:a", "aac", "-shortest", str(src)],
+        check=True, timeout=60,
+    )
+    assert ffmpeg_service.has_audio_stream(src) is True
+    dst = ffmpeg_service.mute_video(src, tmp_path / "muted.mp4")
+    assert dst.exists()
+    assert ffmpeg_service.has_audio_stream(dst) is False
+
+
+@needs_ffmpeg
+def test_probe_returns_curated_metadata(tmp_path, monkeypatch):
+    import subprocess
+
+    _stub_temp_dir(monkeypatch, tmp_path)
+    src = tmp_path / "src.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+         "-f", "lavfi", "-i", "testsrc=duration=2:size=640x480:rate=30",
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+         "-c:v", "libx264", "-c:a", "aac", "-shortest", str(src)],
+        check=True, timeout=60,
+    )
+    info = ffmpeg_service.probe(src)
+    assert info["video"]["width"] == 640
+    assert info["video"]["height"] == 480
+    assert info["audio"]["codec"] == "aac"
+    assert 1.5 < info["duration_seconds"] < 2.5
+
+
+@needs_ffmpeg
+def test_video_info_endpoint(client, monkeypatch, tmp_path):
+    import subprocess
+
+    from backend.core.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("TIKSAFE_TEMP_DIR", str(tmp_path))
+    try:
+        src = tmp_path / "up.mp4"
+        subprocess.run(
+            ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+             "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+             "-c:v", "libx264", "-an", str(src)],
+            check=True, timeout=60,
+        )
+        resp = client.post(
+            "/api/video-info",
+            files={"file": ("up.mp4", src.read_bytes(), "video/mp4")},
+        )
+    finally:
+        get_settings.cache_clear()
+    assert resp.status_code == 200
+    info = resp.json()["info"]
+    assert info["video"]["width"] == 320
+    assert info["audio"] is None
+
+
+def test_quality_format_mapping():
+    from backend.api.routes.download import _quality_format
+
+    assert _quality_format("best") == "bv*+ba/b"
+    assert "1080" in _quality_format("high")
+    assert "720" in _quality_format("medium")
+    assert "480" in _quality_format("low")
+
+
+def test_download_request_rejects_bad_quality():
+    import pytest as _pytest
+
+    from backend.schemas.media import DownloadRequest
+
+    with _pytest.raises(Exception):
+        DownloadRequest(url="https://www.tiktok.com/@x/video/1", quality="ultra")

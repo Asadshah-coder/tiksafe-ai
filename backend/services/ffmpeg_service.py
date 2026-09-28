@@ -8,6 +8,7 @@ Rules enforced here:
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from functools import lru_cache
@@ -180,6 +181,103 @@ def extract_frame(
         ["-ss", timestamp, "-i", str(src_p), "-frames:v", "1", "-q:v", "2", str(dst_p)]
     )
     return dst_p
+
+
+def video_to_gif(src: str | Path, dst: str | Path, width: int = 480, fps: int = 10) -> Path:
+    """Convert a video clip to an animated GIF (two-pass palette for quality)."""
+    src_p, dst_p = _checked_path(src), _checked_path(dst)
+    width = min(max(int(width), 160), 1280)
+    fps = min(max(int(fps), 1), 30)
+    palette = dst_p.with_name(dst_p.stem + "_palette.png")
+    try:
+        run_ffmpeg(
+            ["-i", str(src_p), "-vf",
+             f"fps={fps},scale={width}:-1:flags=lanczos,palettegen",
+             str(palette)]
+        )
+        run_ffmpeg(
+            ["-i", str(src_p), "-i", str(palette), "-lavfi",
+             f"fps={fps},scale={width}:-1:flags=lanczos[x];[x][1:v]paletteuse",
+             str(dst_p)]
+        )
+    finally:
+        if palette.exists():
+            palette.unlink(missing_ok=True)
+    return dst_p
+
+
+def mute_video(src: str | Path, dst: str | Path) -> Path:
+    """Remove the audio track from a video (stream copy, fast)."""
+    src_p, dst_p = _checked_path(src), _checked_path(dst)
+    run_ffmpeg(["-i", str(src_p), "-c:v", "copy", "-an", str(dst_p)])
+    return dst_p
+
+
+def probe(src: str | Path) -> dict:
+    """Return curated media metadata via ffprobe (format + streams).
+
+    Raises FFmpegError when the file cannot be read.
+    """
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        raise FFmpegError("Media analysis is unavailable on this server.")
+    src_p = _checked_path(src)
+    try:
+        proc = subprocess.run(
+            [ffprobe, "-v", "error", "-print_format", "json",
+             "-show_format", "-show_streams", str(src_p)],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        raise FFmpegError("Could not read media information.") from exc
+    if proc.returncode != 0:
+        log.warning("ffprobe failed: %s", (proc.stderr or "").strip()[:300])
+        raise FFmpegError(
+            "Could not read this file. It may be corrupted or unsupported."
+        )
+    try:
+        data = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        raise FFmpegError("Could not read media information.") from exc
+
+    fmt = data.get("format", {}) or {}
+    streams = data.get("streams", []) or []
+    video = next((s for s in streams if s.get("codec_type") == "video"), {})
+    audio = next((s for s in streams if s.get("codec_type") == "audio"), {})
+
+    def _fps(raw: str | None) -> float | None:
+        try:
+            num, den = (raw or "0/1").split("/")
+            return round(float(num) / float(den), 2) if float(den) else None
+        except (ValueError, ZeroDivisionError):
+            return None
+
+    def _num(raw, cast=float):
+        try:
+            return cast(raw)
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "filename": fmt.get("filename", "").split("/")[-1],
+        "format": fmt.get("format_name"),
+        "duration_seconds": _num(fmt.get("duration")),
+        "size_bytes": _num(fmt.get("size"), int),
+        "bitrate_kbps": round(_num(fmt.get("bit_rate"), float) / 1000, 1)
+        if _num(fmt.get("bit_rate"), float) else None,
+        "video": {
+            "codec": video.get("codec_name"),
+            "width": _num(video.get("width"), int),
+            "height": _num(video.get("height"), int),
+            "fps": _fps(video.get("avg_frame_rate")),
+            "pixel_format": video.get("pix_fmt"),
+        } if video else None,
+        "audio": {
+            "codec": audio.get("codec_name"),
+            "sample_rate_hz": _num(audio.get("sample_rate"), int),
+            "channels": _num(audio.get("channels"), int),
+        } if audio else None,
+    }
 
 
 def probe_duration(src: str | Path) -> float | None:

@@ -14,17 +14,25 @@ Built with **FastAPI**, **Streamlit**, **yt-dlp**, **FFmpeg**, and **Whisper**.
 - **URL analysis** — paste a TikTok link, get title, creator, duration, views,
   likes, thumbnail, and available formats. Robust validation rejects empty,
   malformed, or off-domain URLs before anything else happens.
-- **Downloads** — video (MP4), audio (MP3), and thumbnail for publicly
-  available media, with file-size display and automatic temp-file cleanup.
+- **Downloads** — video (MP4) with quality choice (Best / 1080p / 720p / 480p),
+  audio (MP3), and thumbnail for publicly available media, with file-size
+  display and automatic temp-file cleanup.
 - **Clean Export (video processing)** — upload your *own* video and trim, crop,
-  resize, compress, convert to MP4, extract audio/thumbnail, or generate
-  subtitles. Shows original vs. processed size and processing time.
+  resize, compress, convert to MP4, extract audio/thumbnail, generate
+  subtitles, convert to GIF, or mute the audio. Shows original vs. processed
+  size and processing time. The **Media Inspector** shows duration, resolution,
+  codecs, and audio tracks before you edit.
 - **AI Toolkit** (optional, needs an API key)
   - 🎯 Caption generator — professional, viral, storytelling, short, emotional, educational
   - #️⃣ Hashtag generator — primary / niche / broad
   - 🎙️ Transcription — Whisper with timestamps, TXT download
   - 📝 Summarizer — summary, key points, topics, keywords
   - 🌐 Translator — English ⇄ Urdu ⇄ Roman Urdu
+- **Offline keyword & hashtag helper** — no API key needed; suggests keywords
+  and hashtags from your caption or transcript (clearly labeled as offline,
+  not AI).
+- **Creator-friendly pages** — About, Privacy Policy, Terms of Service,
+  DMCA/Copyright, and Contact pages are built into the app.
 - **Trilingual UI** — English, اردو, Roman Urdu (add more via `frontend/locales/`).
 - **Security-first** — domain allowlist, filename sanitization, upload limits,
   rate limiting, FFmpeg via argument arrays only, no stack traces to clients.
@@ -204,6 +212,28 @@ video. The "Clean Export" video editor only processes videos you upload
 yourself.
 
 ---
+
+## 💰 Monetization (AdSense)
+
+The app is built AdSense-friendly: it ships with **About, Privacy Policy,
+Terms of Service, DMCA/Copyright, and Contact** pages, a clean navigation
+structure, original tool functionality, and clearly marked ad placeholders
+(`ts-ad-slot` in `frontend/assets/theme.css`, rendered by `ad_slot()` in
+`frontend/streamlit_app.py`).
+
+**To add your AdSense units later:**
+1. Get approved at [google.com/adsense](https://www.google.com/adsense)
+   and create your ad units.
+2. Replace the body of `ad_slot()` in `frontend/streamlit_app.py` with your
+   AdSense `<ins class="adsbygoogle">` snippet (keep it as the single place
+   where ad code lives).
+3. Push — Streamlit Cloud redeploys automatically.
+
+**Honest note:** downloader-style sites face stricter AdSense review because
+of copyright policy. Approval odds are best when the site is positioned as a
+*creator toolkit* (editing + AI tools for your own content), keeps the policy
+pages accurate, never encourages re-uploading other creators' videos, and has
+real original content (the FAQ, guides, and tool descriptions here help).
 
 ## 🔮 Future improvements
 

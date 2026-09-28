@@ -1,0 +1,203 @@
+/* TikSave AI — premium dark theme (TikTok neon accents) */
+
+:root {
+  --ts-bg: #0b0b13;
+  --ts-bg2: #12121c;
+  --ts-cyan: #25f4ee;
+  --ts-pink: #fe2c55;
+  --ts-text: #f4f4f8;
+  --ts-muted: #a7a7b8;
+  --ts-card: rgba(255, 255, 255, 0.045);
+  --ts-border: rgba(255, 255, 255, 0.09);
+}
+
+.stApp {
+  background:
+    radial-gradient(1100px 480px at 12% -6%, rgba(37, 244, 238, 0.09), transparent 60%),
+    radial-gradient(1000px 520px at 88% -4%, rgba(254, 44, 85, 0.11), transparent 60%),
+    var(--ts-bg);
+  color: var(--ts-text);
+}
+
+/* ---------- hero ---------- */
+.ts-hero {
+  text-align: center;
+  padding: 2.6rem 1rem 1.4rem;
+}
+.ts-hero-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ts-cyan);
+  border: 1px solid rgba(37, 244, 238, 0.4);
+  border-radius: 999px;
+  padding: 0.3rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(37, 244, 238, 0.06);
+}
+.ts-hero h1 {
+  font-size: clamp(2rem, 5.4vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1.08;
+  margin: 0.2rem 0 0.8rem;
+  background: linear-gradient(92deg, #ffffff 20%, var(--ts-cyan) 55%, var(--ts-pink) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ts-hero p {
+  color: var(--ts-muted);
+  font-size: 1.05rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ---------- stat pills ---------- */
+.ts-stats {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 1.2rem 0 0.4rem;
+}
+.ts-stat {
+  background: var(--ts-card);
+  border: 1px solid var(--ts-border);
+  border-radius: 14px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--ts-text);
+}
+.ts-stat b {
+  font-size: 1.15rem;
+  margin-right: 0.35rem;
+  background: linear-gradient(92deg, var(--ts-cyan), var(--ts-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- cards ---------- */
+.ts-card {
+  background: var(--ts-card);
+  border: 1px solid var(--ts-border);
+  border-radius: 18px;
+  padding: 1.3rem 1.4rem;
+  height: 100%;
+  backdrop-filter: blur(6px);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.ts-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 244, 238, 0.35);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}
+.ts-card h4 {
+  margin: 0.1rem 0 0.5rem;
+  font-size: 1.02rem;
+}
+.ts-card p {
+  color: var(--ts-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+.ts-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-weight: 800;
+  color: #0b0b13;
+  background: linear-gradient(135deg, var(--ts-cyan), var(--ts-pink));
+  margin-bottom: 0.6rem;
+}
+
+/* ---------- ad slot placeholder ---------- */
+.ts-ad-slot {
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--ts-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 1.6rem 1rem;
+  margin: 1.6rem 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ---------- footer ---------- */
+.ts-footer {
+  text-align: center;
+  color: var(--ts-muted);
+  font-size: 0.85rem;
+  padding: 2rem 1rem 1rem;
+  border-top: 1px solid var(--ts-border);
+  margin-top: 2.5rem;
+}
+.ts-footer .ts-brand {
+  font-weight: 700;
+  color: var(--ts-text);
+}
+.ts-footer .ts-brand .x {
+  background: linear-gradient(92deg, var(--ts-cyan), var(--ts-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- streamlit element restyle ---------- */
+.stButton > button[kind="primary"] {
+  background: linear-gradient(92deg, var(--ts-pink), #ff5c7a) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  padding: 0.6rem 1.6rem !important;
+  box-shadow: 0 8px 24px rgba(254, 44, 85, 0.35);
+}
+.stButton > button[kind="primary"]:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 10px 30px rgba(254, 44, 85, 0.5);
+}
+.stButton > button[kind="secondary"] {
+  border-radius: 12px !important;
+  border: 1px solid var(--ts-border) !important;
+  background: var(--ts-card) !important;
+  color: var(--ts-text) !important;
+}
+.stButton > button[kind="secondary"]:hover {
+  border-color: rgba(37, 244, 238, 0.5) !important;
+}
+.stDownloadButton > button {
+  border-radius: 12px !important;
+  border: 1px solid rgba(37, 244, 238, 0.45) !important;
+  background: rgba(37, 244, 238, 0.08) !important;
+  color: var(--ts-text) !important;
+  font-weight: 600 !important;
+}
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--ts-border) !important;
+  border-radius: 12px !important;
+  color: var(--ts-text) !important;
+}
+.stSelectbox > div > div {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 12px !important;
+}
+div[data-testid="stExpander"] {
+  background: var(--ts-card);
+  border: 1px solid var(--ts-border);
+  border-radius: 14px;
+}
+section[data-testid="stSidebar"] {
+  background: #0e0e17;
+  border-right: 1px solid var(--ts-border);
+}
+h1, h2, h3, h4 { color: var(--ts-text) !important; }
+.ts-muted { color: var(--ts-muted); }
+.ts-center { text-align: center; }

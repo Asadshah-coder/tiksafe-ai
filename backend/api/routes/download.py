@@ -42,12 +42,22 @@ def _file_response(path: Path, work_dir: Path, filename: str, ext: str) -> FileR
     )
 
 
+def _quality_format(quality: str) -> str:
+    """Map a friendly quality preset to a safe yt-dlp format selector."""
+    return {
+        "best": "bv*+ba/b",
+        "high": "bv*[height<=1080]+ba/b[height<=1080]/b",
+        "medium": "bv*[height<=720]+ba/b[height<=720]/b",
+        "low": "bv*[height<=480]+ba/b[height<=480]/b",
+    }[quality]
+
+
 @router.post("/download", summary="Download the video file")
 def download_video(payload: DownloadRequest) -> FileResponse:
     work_dir: Path | None = None
     try:
         path, work_dir, meta = downloader.download_video(
-            payload.url, payload.format_id
+            payload.url, _quality_format(payload.quality)
         )
     except Exception:
         if work_dir is not None:
