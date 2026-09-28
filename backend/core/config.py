@@ -42,7 +42,7 @@ class Settings(BaseSettings):
         default="", validation_alias=AliasChoices("GEMINI_API_KEY", "TIKSAFE_GEMINI_API_KEY")
     )
     gemini_model: str = Field(
-        default="gemini-2.0-flash",
+        default="gemini-3.8-flash",
         validation_alias=AliasChoices("GEMINI_MODEL", "TIKSAFE_GEMINI_MODEL"),
     )
 
