@@ -14,6 +14,7 @@
   "ai_transcribe": "Transcribe",
   "ai_translate": "Translate",
   "ai_unavailable_hint": "Set OPENAI_API_KEY or GEMINI_API_KEY to enable them.",
+  "whisper_off": "Audio transcription is not available on this server (Whisper is not installed).",
   "analysis_failed": "Analysis failed",
   "analyze_button": "Analyze Video",
   "analyze_caption": "Paste a public TikTok video link to see what's available.",

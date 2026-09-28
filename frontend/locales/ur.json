@@ -13,6 +13,7 @@
   "ai_transcribe": "ٹرانسکرائب",
   "ai_translate": "ترجمہ",
   "ai_unavailable_hint": "انہیں فعال کرنے کے لیے OPENAI_API_KEY یا GEMINI_API_KEY سیٹ کریں۔",
+  "whisper_off": "اس سرور پر آڈیو ٹرانسکرپشن دستیاب نہیں ہے (Whisper انسٹال نہیں ہے)۔",
   "analysis_failed": "تجزیہ ناکام ہوا",
   "analyze_button": "ویڈیو کا تجزیہ کریں",
   "analyze_caption": "دستیاب معلومات دیکھنے کے لیے عوامی ٹک ٹاک ویڈیو کا لنک درج کریں۔",

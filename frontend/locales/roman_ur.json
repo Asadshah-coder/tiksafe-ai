@@ -13,6 +13,7 @@
   "ai_transcribe": "Transcribe",
   "ai_translate": "Tarjuma",
   "ai_unavailable_hint": "Inhein on karne ke liye OPENAI_API_KEY ya GEMINI_API_KEY set karein.",
+  "whisper_off": "Is server pe audio transcription available nahi hai (Whisper install nahi hai).",
   "analysis_failed": "Tajziya nakaam hua",
   "analyze_button": "Video Analyze Karein",
   "analyze_caption": "Dastiyaab maloomat dekhne ke liye public TikTok video ka link dein.",
