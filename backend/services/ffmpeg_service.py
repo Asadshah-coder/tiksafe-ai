@@ -76,8 +76,33 @@ def run_ffmpeg(args: list[str], timeout: int | None = None) -> None:
         )
 
 
+def has_audio_stream(src: str | Path) -> bool:
+    """Check via ffprobe whether the file has an audio stream.
+
+    Returns True when unsure (e.g. ffprobe missing) so FFmpeg still gets
+    a chance and reports its own error.
+    """
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return True
+    try:
+        proc = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=index", "-of", "csv=p=0",
+             str(_checked_path(src))],
+            capture_output=True, text=True, timeout=30,
+        )
+        return bool(proc.stdout.strip())
+    except (subprocess.SubprocessError, OSError):
+        return True
+
+
 def extract_audio(src: str | Path, dst: str | Path, bitrate: str = "128k") -> Path:
     src_p, dst_p = _checked_path(src), _checked_path(dst)
+    if not has_audio_stream(src_p):
+        raise FFmpegError(
+            "This video has no audio track, so there is nothing to extract."
+        )
     run_ffmpeg(
         ["-i", str(src_p), "-vn", "-c:a", "libmp3lame", "-b:a", bitrate, str(dst_p)]
     )

@@ -115,3 +115,58 @@ def test_ffmpeg_checked_path_rejects_escape(tmp_path, monkeypatch):
 
 def test_ffmpeg_available_returns_bool():
     assert isinstance(ffmpeg_service.ffmpeg_available(), bool)
+
+
+needs_ffmpeg = pytest.mark.skipif(
+    not ffmpeg_service.ffmpeg_available(),
+    reason="FFmpeg not installed",
+)
+
+
+@needs_ffmpeg
+def test_extract_audio_rejects_silent_video(tmp_path, monkeypatch):
+    import subprocess
+
+    _stub_temp_dir(monkeypatch, tmp_path)
+    silent = tmp_path / "silent.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+         "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+         "-c:v", "libx264", "-an", str(silent)],
+        check=True, timeout=60,
+    )
+    assert ffmpeg_service.has_audio_stream(silent) is False
+    with pytest.raises(ffmpeg_service.FFmpegError, match="no audio track"):
+        ffmpeg_service.extract_audio(silent, tmp_path / "out.mp3")
+
+
+@needs_ffmpeg
+def test_api_audio_on_silent_video_gives_clear_error(client, monkeypatch, tmp_path):
+    import subprocess
+
+    monkeypatch.setattr(
+        "backend.api.routes.processing.ffmpeg_service.ffmpeg_available",
+        lambda: True,
+    )
+    # Point the API temp dir at tmp_path so the silent clip can be built there
+    from backend.core.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("TIKSAFE_TEMP_DIR", str(tmp_path))
+    try:
+        silent = tmp_path / "silent.mp4"
+        subprocess.run(
+            ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+             "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=10",
+             "-c:v", "libx264", "-an", str(silent)],
+            check=True, timeout=60,
+        )
+        resp = client.post(
+            "/api/process-video",
+            files={"file": ("silent.mp4", silent.read_bytes(), "video/mp4")},
+            data={"operation": "audio"},
+        )
+    finally:
+        get_settings.cache_clear()
+    assert resp.status_code == 422
+    assert "no audio track" in resp.json()["error"]
