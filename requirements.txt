@@ -1,0 +1,19 @@
+# Core API
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+
+# Media extraction (public metadata/downloads only — no auth, no DRM bypass)
+yt-dlp>=2024.8.6
+
+# Frontend
+streamlit>=1.32.0
+
+# Speech-to-text (optional at runtime; imported lazily so the API works without it)
+faster-whisper>=1.0.0
+
+# Testing
+pytest>=8.0.0
