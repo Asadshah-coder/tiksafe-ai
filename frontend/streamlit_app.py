@@ -445,19 +445,30 @@ def render_ai() -> None:
     if not ai_on:
         st.warning(f"{_('ai_off')} {_('ai_unavailable_hint')}")
 
-    # Offline keyword helper - always available, honestly labeled.
+    # Offline keyword helper — always available, honestly labeled.
     with st.container(border=True):
         st.markdown(f"#### ⚡ {_('kw_title')}")
-        st.caption(_('kw_desc'))
-        text = st.text_area(_('paste_text'), key="kw_text", height=120)
-        if st.button(_('kw_btn'), key="kw_btn"):
-            kws = keyword_suggestions(text)
-            if kws:
-                st.markdown("**Keywords:** " + ", ".join(f"`{k}`" for k in kws))
-                tags = hashtags_from_keywords(kws)
-                st.markdown("**Hashtags:** " + " ".join(f"`{t}`" for t in tags))
+        st.caption(_("kw_sub"))
+        kw_input = st.text_area(_("kw_input"), height=100, key="kw_text")
+        if st.button(_("kw_button"), key="kw_go"):
+            if not kw_input.strip():
+                st.warning(_("kw_input"))
             else:
-                st.info(_('kw_empty'))
+                try:
+                    result = api_post(
+                        "/api/keywords",
+                        {"text": kw_input.strip(), "max_keywords": 12},
+                    )
+                    k1, k2 = st.columns(2)
+                    with k1:
+                        st.markdown(f"**{_('kw_keywords')}**")
+                        st.code(", ".join(result["keywords"]) or "—", language=None)
+                    with k2:
+                        st.markdown(f"**{_('kw_hashtags')}**")
+                        st.code(" ".join(result["hashtags"]) or "—", language=None)
+                    st.caption(f"ℹ️ {_('kw_note')}")
+                except APIError as exc:
+                    st.error(str(exc))
 
     default_topic = ""
     if st.session_state.media:
@@ -468,37 +479,62 @@ def render_ai() -> None:
 
         with card_caption:
             with st.container(border=True):
-                st.markdown(f"#### ✍️ {_('ai_caption')}")
-                topic = st.text_input(_('topic'), value=default_topic, key="cap_topic")
-                tone = st.selectbox(_('tone'), ["viral", "professional", "funny", "minimal"],
-                                    format_func=lambda t: _('tone_' + t), key="cap_tone")
-                if st.button(_('generate'), key="cap_btn"):
+                st.markdown(f"#### 🎯 {_('ai_caption')}")
+                topic = st.text_input(
+                    _("topic_label"), value=default_topic, key="cap_topic"
+                )
+                styles = st.multiselect(
+                    _("styles_label"),
+                    options=["professional", "viral", "storytelling",
+                             "short", "emotional", "educational"],
+                    default=["professional", "viral", "short"],
+                    key="cap_styles",
+                )
+                if st.button(_("generate"), key="cap_go"):
                     if not topic.strip():
-                        st.warning(_('topic_required'))
+                        st.warning(_("topic_label"))
                     else:
-                        try:
-                            out = post_json("/api/caption", {"topic": topic, "tone": tone})
-                            for c in out.get("captions", []):
-                                st.code(c)
-                        except ApiError as e:
-                            st.error(e.message)
+                        with st.spinner(_("generate") + "…"):
+                            try:
+                                result = api_post(
+                                    "/api/caption",
+                                    {"topic": topic.strip(), "language": lang,
+                                     "styles": styles or None},
+                                )
+                                for style, caption_text in result["captions"].items():
+                                    st.markdown(f"**{style}**")
+                                    st.code(caption_text, language=None)
+                            except APIError as exc:
+                                st.error(str(exc))
 
         with card_tags:
             with st.container(border=True):
                 st.markdown(f"#### #️⃣ {_('ai_hashtags')}")
-                topic2 = st.text_input(_('topic'), value=default_topic, key="tag_topic")
-                count = st.slider(_('count'), 5, 30, 12, key="tag_count")
-                if st.button(_('generate'), key="tag_btn"):
-                    if not topic2.strip():
-                        st.warning(_('topic_required'))
+                topic_tags = st.text_input(
+                    _("topic_label"), value=default_topic, key="tag_topic"
+                )
+                if st.button(_("generate"), key="tag_go"):
+                    if not topic_tags.strip():
+                        st.warning(_("topic_label"))
                     else:
-                        try:
-                            out = post_json("/api/hashtags", {"topic": topic2, "count": count})
-                            tags = out.get("hashtags", [])
-                            if tags:
-                                st.markdown(" ".join(f"`{t}`" for t in tags))
-                        except ApiError as e:
-                            st.error(e.message)
+                        with st.spinner(_("generate") + "…"):
+                            try:
+                                result = api_post(
+                                    "/api/hashtags",
+                                    {"topic": topic_tags.strip(), "language": lang},
+                                )
+                                cols = st.columns(3)
+                                for col, (label, tags) in zip(
+                                    cols,
+                                    [(_("hashtags_primary"), result["primary"]),
+                                     (_("hashtags_niche"), result["niche"]),
+                                     (_("hashtags_broad"), result["broad"])],
+                                ):
+                                    with col:
+                                        st.markdown(f"**{label}**")
+                                        st.code(" ".join(tags) or "—", language=None)
+                            except APIError as exc:
+                                st.error(str(exc))
 
     card_transcribe, card_summarize = st.columns(2)
 
@@ -508,59 +544,109 @@ def render_ai() -> None:
             if not whisper_on:
                 st.info(_("whisper_off"))
             else:
-                up = st.file_uploader(_('upload_audio'), type=["mp3", "wav", "m4a", "ogg", "mp4"],
-                                      key="tr_file")
-                if st.button(_('transcribe'), key="tr_btn"):
-                    if up is None:
-                        st.warning(_('choose_file'))
+                st.caption(_("transcript_hint"))
+                if st.button(_("transcribe_button"), key="tr_go"):
+                    if not st.session_state.media:
+                        st.warning(_("no_media"))
                     else:
-                        try:
-                            with st.spinner(_('working')):
-                                out = post_files("/api/transcribe", up)
-                            st.text_area(_('transcript'), out.get("text", ""), height=180, key="tr_out")
-                            st.session_state.transcript = out.get("text", "")
-                        except ApiError as e:
-                            st.error(e.message)
+                        with st.spinner(_("transcribing")):
+                            try:
+                                result = api_post(
+                                    "/api/transcribe",
+                                    {"url": st.session_state.media["webpage_url"]},
+                                    timeout=900,
+                                )
+                                st.session_state.transcript = result["text"]
+                            except APIError as exc:
+                                st.error(str(exc))
+                transcript_text = st.text_area(
+                    _("transcript_label"),
+                    value=st.session_state.transcript,
+                    height=180,
+                    key="tr_text",
+                )
+                st.session_state.transcript = transcript_text
+                if transcript_text.strip():
+                    st.download_button(
+                        f"⬇️ {_('download_txt')}",
+                        data=transcript_text,
+                        file_name="transcript.txt",
+                        mime="text/plain",
+                    )
 
     with card_summarize:
         if ai_on:
             with st.container(border=True):
                 st.markdown(f"#### 📝 {_('ai_summarize')}")
-                src = st.text_area(_('paste_text'), value=st.session_state.transcript,
-                                   height=140, key="sum_text")
-                if st.button(_('summarize'), key="sum_btn"):
-                    if not src.strip():
-                        st.warning(_('paste_first'))
+                summary_source = st.text_area(
+                    _("transcript_label"),
+                    value=st.session_state.transcript,
+                    height=120,
+                    key="sum_text",
+                    placeholder=_("transcript_hint"),
+                )
+                if st.button(_("summarize_button"), key="sum_go"):
+                    if not summary_source.strip():
+                        st.warning(_("transcript_label"))
                     else:
-                        try:
-                            with st.spinner(_('working')):
-                                out = post_json("/api/summarize", {"text": src})
-                            st.markdown(out.get("summary", ""))
-                        except ApiError as e:
-                            st.error(e.message)
+                        with st.spinner(_("summarizing")):
+                            try:
+                                result = api_post(
+                                    "/api/summarize",
+                                    {"text": summary_source.strip(),
+                                     "language": lang},
+                                )
+                                st.markdown(f"**{_('summary_label')}**")
+                                st.write(result["summary"])
+                                if result.get("key_points"):
+                                    st.markdown(f"**{_('key_points')}**")
+                                    for point in result["key_points"]:
+                                        st.write(f"• {point}")
+                                tag_cols = st.columns(2)
+                                with tag_cols[0]:
+                                    if result.get("topics"):
+                                        st.markdown(f"**{_('topics')}**")
+                                        st.write(", ".join(result["topics"]))
+                                with tag_cols[1]:
+                                    if result.get("keywords"):
+                                        st.markdown(f"**{_('keywords')}**")
+                                        st.write(", ".join(result["keywords"]))
+                                st.caption(f"⚠️ {_('ai_disclaimer')}")
+                            except APIError as exc:
+                                st.error(str(exc))
 
     if ai_on:
         with st.container(border=True):
             st.markdown(f"#### 🌐 {_('ai_translate')}")
-            tcol1, tcol2 = st.columns(2)
+            tcol1, tcol2 = st.columns([3, 1])
             with tcol1:
-                src_text = st.text_area(_('paste_text'), height=120, key="trl_text")
+                translate_input = st.text_area(
+                    _("translate_label"), height=100, key="trl_text"
+                )
             with tcol2:
-                target = st.selectbox(_('target_lang'), ["en", "ur", "roman_ur"],
-                                      format_func=lambda c: {'en': 'English', 'ur': 'اردو',
-                                                             'roman_ur': 'Roman Urdu'}[c],
-                                      key="trl_target")
-                if st.button(_('translate'), key="trl_btn"):
-                    if not src_text.strip():
-                        st.warning(_('paste_first'))
+                target = st.selectbox(
+                    _("target_label"),
+                    options=list(LANGUAGES.keys()),
+                    format_func=lambda code: LANGUAGES[code],
+                    key="trl_target",
+                )
+                if st.button(_("translate_button"), key="trl_go"):
+                    if not translate_input.strip():
+                        st.warning(_("translate_label"))
                     else:
-                        try:
-                            with st.spinner(_('working')):
-                                out = post_json("/api/translate", {"text": src_text, "target": target})
-                            st.text_area(_('translation'), out.get("translation", ""),
-                                         height=120, key="trl_out")
-                        except ApiError as e:
-                            st.error(e.message)
+                        with st.spinner(_("translating")):
+                            try:
+                                result = api_post(
+                                    "/api/translate",
+                                    {"text": translate_input.strip(),
+                                     "target": target},
+                                )
+                                st.code(result["translated"], language=None)
+                            except APIError as exc:
+                                st.error(str(exc))
+
+
+    # ---------------------------------------------------------------------------
 # Page: Clean Export (user uploads only)
 # ---------------------------------------------------------------------------
 
