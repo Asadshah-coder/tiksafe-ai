@@ -1,0 +1,34 @@
+# keep-awake.yml — keeps the Streamlit portfolio apps from sleeping.
+#
+# Streamlit Community Cloud puts free-tier apps to sleep after a period of
+# inactivity, so portfolio visitors hit a "wake up" screen instead of the app.
+# This workflow pings both apps every 15 minutes; the steady traffic counts as
+# activity and the apps stay awake. Free on public repos (Actions minutes are
+# unlimited for public repositories).
+#
+# Setup: commit this file to the repo's main branch, then open the repo's
+# Actions tab once and run "keep-apps-awake" manually to confirm it works.
+# Note: GitHub pauses scheduled workflows after 60 days with no repo activity;
+# re-enable with one click in the Actions tab if that ever happens.
+
+name: keep-apps-awake
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # every 15 minutes
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping TikSave AI
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://tiksafe-ai.streamlit.app/ || echo "curl-failed")
+          echo "TikSave AI -> ${code}"
+
+      - name: Ping ResearchFlow AI
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://researchflow-ai01.streamlit.app/ || echo "curl-failed")
+          echo "ResearchFlow AI -> ${code}"
